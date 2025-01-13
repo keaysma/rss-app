@@ -1,0 +1,8 @@
+.DS_Store
+node_modules
+dist
+test-results/
+package-lock.json
+vite.config.js.timestamp-*
+.env
+.svelte-kit
