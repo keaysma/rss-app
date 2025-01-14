@@ -8,7 +8,12 @@ export interface GeneralMessagePayload extends MessagePayloadBase {
 
 export interface MessageInsertFeedConfig extends MessagePayloadBase {
     message: "insert-feed-config";
-    feedConfig: CreateFeedConfigData;
+    feedConfig: FeedConfigFormData;
+}
+
+export interface MessageUpdateFeedConfig extends MessagePayloadBase {
+    message: "update-feed-config";
+    feedConfig: FeedConfigFormData;
 }
 
 export interface MessageGetFeedConfigHTML extends MessagePayloadBase {
@@ -26,7 +31,7 @@ export interface MessageDeleteFeedConfig extends MessagePayloadBase {
     feedConfigId: number;
 }
 
-export type MessagePayload = GeneralMessagePayload | MessageInsertFeedConfig | MessageUpdateFeedData | MessageGetFeedConfigHTML | MessageDeleteFeedConfig;
+export type MessagePayload = GeneralMessagePayload | MessageInsertFeedConfig | MessageUpdateFeedConfig | MessageUpdateFeedData | MessageGetFeedConfigHTML | MessageDeleteFeedConfig;
 
 export interface MessageResponseBase {
     message: string;
@@ -90,7 +95,8 @@ export interface FeedConfigRow {
 
 export type ListFeedConfigResponse = Omit<FeedConfigRow, "html">[];
 
-export interface CreateFeedConfigData {
+export interface FeedConfigFormData {
+    id: number;
     feed_type: string;
     url: string;
     proxy: string;

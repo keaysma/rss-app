@@ -1,4 +1,4 @@
-import { demo, devNukeDb, initializeSqlite, listFeedConfigs, insertFeedConfig, prepareDbTables, updateFeedData, selectFeedConfigHTML, deleteFeedConfig } from "./sqlite3";
+import { demo, devNukeDb, initializeSqlite, listFeedConfigs, insertFeedConfig, prepareDbTables, updateFeedData, selectFeedConfigHTML, deleteFeedConfig, updateFeedConfig } from "./sqlite3";
 import type { MessagePayload, MessageResponse, Sqlite3DatabaseHandle } from "./types";
 
 async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<MessagePayload>): Promise<MessageResponse> {
@@ -23,6 +23,14 @@ async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<Mess
             console.log('Insert feed config message received');
             const feedConfig = event.data.feedConfig;
             insertFeedConfig(db, feedConfig);
+
+            const feedConfigs = listFeedConfigs(db);
+            return { message: "feed-configs", feedConfigs };
+        }
+        case "update-feed-config": {
+            console.log('Update feed config message received');
+            const feedConfig = event.data.feedConfig;
+            updateFeedConfig(db, feedConfig);
 
             const feedConfigs = listFeedConfigs(db);
             return { message: "feed-configs", feedConfigs };

@@ -1,7 +1,7 @@
 # TODOs
 You over enter a room on a house tour or something and try to turn on the lights, but nothing happens... then you look up and see that there's just two wires coming out of the ceiling? TODO...
 
-- [ ] Allow editing of feeds
+- [x] Allow editing of feeds
 - [ ] Light mode/Dark mode switcher
 - [ ] Mark as read, hide, keeping track of when articles were read with another table
 - [ ] Service worker

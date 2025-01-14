@@ -1,7 +1,7 @@
 /// <reference types="../../env.d.ts" />
 
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm';
-import type { CreateFeedConfigData, FeedConfigHTMLResponse, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
+import type { FeedConfigFormData, FeedConfigHTMLResponse, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
 
 export const demoDummy = (db: Sqlite3DatabaseHandle) => {
     console.log("Created database at", db.filename);
@@ -254,8 +254,8 @@ export const listFeedConfigs = (db: Sqlite3DatabaseHandle): ListFeedConfigRespon
     return feedConfigs;
 }
 
-export const insertFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: CreateFeedConfigData) => {
-    console.log("Inserting a row into 'feed_config' table...");
+export const insertFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConfigFormData) => {
+    console.log("Inserting a row into 'feed_configs' table...");
 
     const {
         feed_type,
@@ -293,13 +293,53 @@ export const insertFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: CreateFe
             "",
         ],
         callback: ([id]: [string]) => {
-            console.log("Inserted row with name:", id);
+            console.log("Inserted row with id:", id);
+        }
+    });
+}
+
+export const updateFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConfigFormData) => {
+    console.log("Update a row in 'feed_configs' table...", feedConfig.id, feedConfig);
+
+    const {
+        id,
+        feed_type,
+        url,
+        proxy,
+        title,
+        description,
+        scan_interval,
+    } = feedConfig;
+
+    db.exec({
+        sql: `
+            UPDATE feed_configs
+            SET
+                feed_type = ?,
+                url = ?,
+                proxy = ?,
+                title = ?,
+                description = ?,
+                scan_interval = ?
+            WHERE id = ?
+            RETURNING title`,
+        bind: [
+            feed_type,
+            url,
+            proxy,
+            title,
+            description,
+            scan_interval,
+            id,
+        ],
+        callback: ([title]: [string]) => {
+            console.log("Updated row with title:", title);
         }
     });
 }
 
 export const updateFeedData = (db: Sqlite3DatabaseHandle, feedConfig: UpdateFeedConfigData) => {
-    console.log("Updating a row in 'feed_config' table...");
+    console.log("Updating a row in 'feed_configs' table...");
 
     const {
         id,

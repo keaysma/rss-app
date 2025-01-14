@@ -1,9 +1,16 @@
 <script lang="ts">
 	import ThemeSwitcher from '$lib/components/theme-switcher.svelte';
 	import initWorker from '$lib/loadWorker';
-	import type { ListFeedConfigResponse, MessageResponse, WorkerInterface } from '$lib/types';
+	import type {
+		FeedConfigFormData,
+		ListFeedConfigResponse,
+		MessageResponse,
+		WorkerInterface
+	} from '$lib/types';
 	import { formatDate, getFetchURL, getLastUpdated, parseScanInterval } from '$lib/helpers';
 	import { onDestroy, onMount } from 'svelte';
+	import { fetchFeedDetails } from '$lib/requests';
+	import { NEW_FEED_CONFIG } from '$lib/consts';
 
 	let worker: WorkerInterface | null = $state(null);
 	let feedConfigs: ListFeedConfigResponse = $state([]);
@@ -38,12 +45,11 @@
 				feedConfigs = event.data.feedConfigs;
 
 				if (feedConfigs.length === 0) {
-					showNewFeedDialog = true;
+					feedConfigForm = { ...NEW_FEED_CONFIG };
+					selectedAction = 'new';
 				} else {
+					resetActionState();
 					scanFeeds();
-
-					selectedFeedConfig = null;
-					selectedAction = null;
 				}
 				break;
 			case 'feed-config-html':
@@ -151,17 +157,22 @@
 		}
 	};
 
-	let showNewFeedDialog = $state(false);
 	let urlFetchError = $state('');
-	let url = $state('');
-	let proxy = $state('');
-	let title = $state('');
-	let description = $state('');
-	let scan_interval = $state('30m');
-	let feed_type = $state('rss');
+	// let url = $state('');
+	// let proxy = $state('');
+	// let title = $state('');
+	// let description = $state('');
+	// let scan_interval = $state('30m');
+	// let feed_type = $state('rss');
 
-	let selectedAction: 'open' | 'details' | 'edit' | 'delete' | null = $state(null);
+	let selectedAction: 'open' | 'details' | 'new' | 'edit' | 'delete' | null = $state(null);
+	let feedConfigForm: FeedConfigFormData | null = $state(null);
 	let selectedFeedConfig: ListFeedConfigResponse[number] | null = $state(null);
+	const resetActionState = () => {
+		selectedAction = null;
+		feedConfigForm = null;
+		selectedFeedConfig = null;
+	};
 
 	/*
 	 null: no feed html fetched
@@ -235,71 +246,44 @@
 
 	// example: https://avi.im/blag/index.xml
 	// example: https://hartenfeller.dev/rss.xml
-	const fetchFeedDetails = async () => {
-		urlFetchError = '';
-
-		try {
-			const fetchURL = getFetchURL({
-				url,
-				proxy
-			});
-			const response = await fetch(fetchURL);
-			const text = await response.text();
-			const parser = new DOMParser();
-			const doc = parser.parseFromString(text, 'text/xml');
-			if (doc.querySelector('parsererror')) {
-				throw new Error('Invalid XML');
-			}
-
-			const docTitle = doc.querySelector('title')?.textContent;
-			const docDescription = doc.querySelector('description')?.textContent;
-			const docFeedType = doc.querySelector('rss')
-				? 'rss'
-				: doc.querySelector('feed')
-					? 'atom'
-					: 'unknown';
-
-			console.debug({ docTitle, docDescription, docFeedType });
-
-			title = docTitle || title;
-			description = docDescription || description;
-			feed_type = docFeedType;
-		} catch (error) {
-			console.error('failed', error);
-
-			if (error instanceof Error) {
-				urlFetchError = error.message;
-
-				console.log({ error });
-
-				if (error.message.includes('NetworkError')) {
-					urlFetchError += +'Try using a CORS proxy (Advanced)';
-				}
-			} else {
-				urlFetchError = 'Unknown error';
-			}
+	const getFeedDetails = async () => {
+		if (!selectedFeedConfig) {
+			return;
 		}
+
+		urlFetchError = '';
+		fetchFeedDetails(selectedFeedConfig)
+			.then(({ title, description, feed_type }) => {
+				console.debug({ title, description, feed_type });
+				selectedFeedConfig = {
+					...selectedFeedConfig!,
+					title,
+					description,
+					feed_type
+				};
+			})
+			.catch((error) => {
+				urlFetchError = error.message;
+			});
 	};
 
-	const submitNewFeed = (event: Event) => {
+	const submitFeedConfigForm = (event: Event) => {
 		event.preventDefault();
 		event.stopPropagation();
 
-		console.debug('submitNewFeed', { url, proxy, title, description, scan_interval, feed_type });
+		if (!feedConfigForm) {
+			console.error('feedConfigForm is null');
+			return;
+		}
+
+		console.debug('submitFeedConfigForm', { ...feedConfigForm });
 		if (worker !== null) {
 			worker.postMessage({
-				message: 'insert-feed-config',
-				feedConfig: {
-					feed_type,
-					url,
-					proxy,
-					title,
-					description,
-					scan_interval
-				}
+				message: feedConfigForm.id === -1 ? 'insert-feed-config' : 'update-feed-config',
+				feedConfig: { ...feedConfigForm }
 			});
 
-			showNewFeedDialog = false;
+			resetActionState();
 		}
 	};
 
@@ -341,15 +325,7 @@
 {#if selectedFeedConfig !== null && selectedAction === 'open'}
 	<header>
 		<h1>{selectedFeedConfig.title}</h1>
-		<button
-			onclick={() => {
-				selectedAction = null;
-				selectedFeedConfig = null;
-				selectedFeedEntryLink = null;
-			}}
-		>
-			Close
-		</button>
+		<button onclick={resetActionState}> Close </button>
 		<button onclick={() => refreshFeed({ ...selectedFeedConfig!, etag: '' })}> Refresh </button>
 	</header>
 
@@ -415,7 +391,14 @@
 {:else}
 	<header>
 		<h1>Feeds</h1>
-		<button disabled={worker === null} onclick={() => (showNewFeedDialog = true)} class="new-feed">
+		<button
+			disabled={worker === null}
+			onclick={() => {
+				selectedAction = 'new';
+				feedConfigForm = { ...NEW_FEED_CONFIG };
+			}}
+			class="new-feed"
+		>
 			New
 		</button>
 	</header>
@@ -460,9 +443,15 @@
 											}}>Details</a
 										>
 									</li>
-									<!-- <li>
-										<a href="##">Edit</a>
-									</li> -->
+									<li>
+										<a
+											href="##"
+											onclick={() => {
+												selectedAction = 'edit';
+												feedConfigForm = { ...feedConfig };
+											}}>Edit</a
+										>
+									</li>
 									<li>
 										<a
 											href="##"
@@ -517,14 +506,7 @@
 			<dd>{selectedFeedConfig?.etag || 'none'}</dd>
 		</dl>
 		<footer>
-			<button
-				onclick={() => {
-					selectedAction = null;
-					selectedFeedConfig = null;
-				}}
-			>
-				Close
-			</button>
+			<button onclick={resetActionState}> Close </button>
 		</footer>
 	</article>
 </dialog>
@@ -534,15 +516,7 @@
 		<h2>Are you sure?</h2>
 		<p>Do you want to delete <b>{selectedFeedConfig?.title}</b></p>
 		<footer>
-			<button
-				class="secondary"
-				onclick={() => {
-					selectedAction = null;
-					selectedFeedConfig = null;
-				}}
-			>
-				Cancel
-			</button>
+			<button class="secondary" onclick={resetActionState}> Cancel </button>
 			<button class="pico-background-red-500" onclick={() => deleteFeedConfig(selectedFeedConfig!)}>
 				Delete
 			</button>
@@ -550,69 +524,78 @@
 	</article>
 </dialog>
 
-<dialog open={showNewFeedDialog}>
-	<article class="feed-config-form">
-		<h2>New RSS Feed</h2>
-		<form onsubmit={submitNewFeed}>
-			<fieldset>
-				<label for="url"> URL </label>
-				<!-- svelte-ignore a11y_no_redundant_roles -->
-				<!-- svelte-ignore a11y_role_supports_aria_props -->
-				<fieldset role="group" aria-invalid={urlFetchError !== ''}>
-					<fieldset>
-						<input
-							id="url"
-							type="text"
-							required
-							pattern="https?://.+\..+"
-							placeholder="https://..."
-							bind:value={url}
-							aria-invalid={urlFetchError !== '' ? true : undefined}
-						/>
+<dialog open={(selectedAction === 'new' || selectedAction === 'edit') && feedConfigForm !== null}>
+	{#if feedConfigForm !== null}
+		<article class="feed-config-form">
+			{#if selectedAction === 'edit'}
+				<h2>Edit Feed Config</h2>
+			{:else}
+				<h2>New Feed Config</h2>
+			{/if}
+			<form onsubmit={submitFeedConfigForm}>
+				<fieldset>
+					<label for="url"> URL </label>
+					<!-- svelte-ignore a11y_no_redundant_roles -->
+					<!-- svelte-ignore a11y_role_supports_aria_props -->
+					<fieldset role="group" aria-invalid={urlFetchError !== ''}>
+						<fieldset>
+							<input
+								id="url"
+								type="text"
+								required
+								pattern="https?://.+\..+"
+								placeholder="https://..."
+								bind:value={feedConfigForm.url}
+								aria-invalid={urlFetchError !== '' ? true : undefined}
+							/>
+						</fieldset>
+						<button type="button" onclick={getFeedDetails}>Fetch</button>
 					</fieldset>
-					<button type="button" onclick={fetchFeedDetails}>Fetch</button>
+					{#if urlFetchError}
+						<small class="error">{urlFetchError}</small>
+					{/if}
+
+					<details>
+						<summary>Advanced</summary>
+
+						<label for="proxy"> Proxy </label>
+						<select id="proxy" bind:value={feedConfigForm.proxy}>
+							<option value="" selected>None</option>
+							<option value="cors-relay">CORS Relay</option>
+						</select>
+
+						<label for="feed_type"> Feed Type </label>
+						<select id="feed_type" bind:value={feedConfigForm.feed_type}>
+							<option value="rss">RSS</option>
+							<option value="atom">Atom</option>
+							<option value="unknown">Unknown</option>
+						</select>
+					</details>
+
+					<hr />
+
+					<label for="title"> Title </label>
+					<input id="title" type="text" required bind:value={feedConfigForm.title} />
+
+					<label for="description"> Description </label>
+					<textarea id="description" bind:value={feedConfigForm.description}></textarea>
+
+					<label for="scan_interval"> Scan Interval </label>
+					<input
+						id="scan_interval"
+						type="text"
+						required
+						bind:value={feedConfigForm.scan_interval}
+					/>
+					<small>ex: 5m, 4h, 1d, 2w</small>
 				</fieldset>
-				{#if urlFetchError}
-					<small class="error">{urlFetchError}</small>
-				{/if}
-
-				<details>
-					<summary>Advanced</summary>
-
-					<label for="proxy"> Proxy </label>
-					<select id="proxy" bind:value={proxy}>
-						<option value="" selected>None</option>
-						<option value="cors-relay">CORS Relay</option>
-					</select>
-
-					<label for="feed_type"> Feed Type </label>
-					<select id="feed_type" bind:value={feed_type}>
-						<option value="rss">RSS</option>
-						<option value="atom">Atom</option>
-						<option value="unknown">Unknown</option>
-					</select>
-				</details>
-
-				<hr />
-
-				<label for="title"> Title </label>
-				<input id="title" type="text" required bind:value={title} />
-
-				<label for="description"> Description </label>
-				<textarea id="description" bind:value={description}></textarea>
-
-				<label for="scan_interval"> Scan Interval </label>
-				<input id="scan_interval" type="text" required bind:value={scan_interval} />
-				<small>ex: 5m, 4h, 1d, 2w</small>
-			</fieldset>
-			<footer class="buttons">
-				<button type="button" class="secondary" onclick={() => (showNewFeedDialog = false)}>
-					Cancel
-				</button>
-				<button type="submit">Save</button>
-			</footer>
-		</form>
-	</article>
+				<footer class="buttons">
+					<button type="button" class="secondary" onclick={resetActionState}> Cancel </button>
+					<button type="submit">Save</button>
+				</footer>
+			</form>
+		</article>
+	{/if}
 </dialog>
 
 <style lang="scss">
