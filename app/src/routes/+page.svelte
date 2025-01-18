@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ThemeSwitcher from '$lib/components/theme-switcher.svelte';
+	// import ThemeSwitcher from '$lib/components/theme-switcher.svelte';
 	import type {
 		FeedConfigFormData,
 		ListFeedConfigResponse,
