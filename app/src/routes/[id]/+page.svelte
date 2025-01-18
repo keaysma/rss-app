@@ -21,6 +21,10 @@
 		switch (event.data.message) {
 			case 'feed-config-full': {
 				console.debug('received feed-config-full', { ...event.data.data });
+				if (event.data.data.id !== feedConfigId) {
+					console.warn('ignore feed-config-full: id mismatch', feedConfigId, event.data.data.id);
+					return;
+				}
 
 				selectedFeedConfig = event.data.data;
 				break;
@@ -36,6 +40,14 @@
 			postMessage({ message: 'get-feed-config-full', feedConfigId });
 		}
 	});
+
+	const handleEntryClick = (link: string) => {
+		if (selectedFeedConfig?.open_entry_setting == 'in-app') {
+			selectedFeedEntryLink = link;
+		} else {
+			window.open(link, '_blank');
+		}
+	};
 
 	let selectedFeedHTMLParsed = $derived.by(() => {
 		if (!selectedFeedConfig || selectedFeedConfig.html === null || selectedFeedConfig.html === '') {
@@ -120,7 +132,12 @@
 	<button onclick={hanldeRefreshFeed}> Refresh </button>
 </header>
 
-<main class="grid entry-list" class:reading={selectedFeedEntryLink !== null}>
+<main
+	class="grid entry-list"
+	class:reading={selectedFeedConfig?.open_entry_setting == 'in-app' &&
+		selectedFeedEntryLink !== null}
+	class:full-size={selectedFeedConfig?.open_entry_setting == 'new-tab'}
+>
 	<table class="feed striped">
 		<thead>
 			<tr>
@@ -133,7 +150,17 @@
 				{#each selectedFeedHTMLParsed as entry}
 					<tr>
 						<!-- TODO: Use link? -->
-						<td class="entry" onclick={() => (selectedFeedEntryLink = entry.link)}>
+						<td
+							class="entry"
+							onclick={(event) => {
+								// Allow anchor elements to be clicked, without opening the entry
+								if (event.target instanceof HTMLAnchorElement) {
+									return;
+								}
+
+								handleEntryClick(entry.link);
+							}}
+						>
 							<hgroup>
 								<h3>{entry.title}</h3>
 								<small>{formatDate(entry.pubDate)}</small>
@@ -184,6 +211,15 @@
 		display: grid;
 		grid-template-columns: 1fr 1fr;
 		grid-template-areas: 'entries article';
+
+		&:not(.reading) {
+			grid-template-areas: 'entries';
+			grid-template-columns: 1fr;
+
+			> aside {
+				display: none;
+			}
+		}
 
 		> table {
 			grid-area: entries;

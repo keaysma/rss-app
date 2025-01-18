@@ -7,16 +7,10 @@
 		MessageResponse,
 		WorkerContextState
 	} from '$lib/types';
-	import {
-		formatDate,
-		getFetchURL,
-		getLastUpdated,
-		parseScanInterval,
-		refreshFeed
-	} from '$lib/helpers';
+	import { formatDate, parseScanInterval, refreshFeed } from '$lib/helpers';
 	import { getContext, onDestroy, onMount } from 'svelte';
 	import { fetchFeedDetails } from '$lib/requests';
-	import { NEW_FEED_CONFIG } from '$lib/consts';
+	import { NEW_FEED_CONFIG, OPEN_ENTRY_SETTING_OPTIONS_MAP } from '$lib/consts';
 	import { goto } from '$app/navigation';
 
 	const postMessage = getContext<(args: MessagePayload) => void>('postMessage');
@@ -261,40 +255,45 @@
 </footer>
 
 <dialog open={selectedFeedConfig !== null && selectedAction === 'details'}>
-	<article>
-		<h2>Feed Config Details</h2>
-		<dl>
-			<dt>Title</dt>
-			<dd>{selectedFeedConfig?.title}</dd>
+	{#if selectedFeedConfig !== null}
+		<article>
+			<h2>Feed Config Details</h2>
+			<dl>
+				<dt>Title</dt>
+				<dd>{selectedFeedConfig.title}</dd>
 
-			<dt>Description</dt>
-			<dd>{selectedFeedConfig?.description}</dd>
+				<dt>Description</dt>
+				<dd>{selectedFeedConfig.description}</dd>
 
-			<dt>URL</dt>
-			<dd>{selectedFeedConfig?.url}</dd>
+				<dt>URL</dt>
+				<dd>{selectedFeedConfig.url}</dd>
 
-			<dt>Feed Type</dt>
-			<dd>{selectedFeedConfig?.feed_type}</dd>
+				<dt>Open Entry In</dt>
+				<dd>{OPEN_ENTRY_SETTING_OPTIONS_MAP[selectedFeedConfig.open_entry_setting]}</dd>
 
-			<dt>Proxy</dt>
-			<dd>{selectedFeedConfig?.proxy || 'none'}</dd>
+				<dt>Feed Type</dt>
+				<dd>{selectedFeedConfig.feed_type}</dd>
 
-			<dt>Scan Interval</dt>
-			<dd>{selectedFeedConfig?.scan_interval}</dd>
+				<dt>Proxy</dt>
+				<dd>{selectedFeedConfig.proxy || 'none'}</dd>
 
-			<dt>Last Checked</dt>
-			<dd>{selectedFeedConfig?.last_checked}</dd>
+				<dt>Scan Interval</dt>
+				<dd>{selectedFeedConfig.scan_interval}</dd>
 
-			<dt>Last Updated</dt>
-			<dd>{selectedFeedConfig?.last_updated}</dd>
+				<dt>Last Checked</dt>
+				<dd>{selectedFeedConfig.last_checked}</dd>
 
-			<dt>ETag</dt>
-			<dd>{selectedFeedConfig?.etag || 'none'}</dd>
-		</dl>
-		<footer>
-			<button onclick={resetActionState}> Close </button>
-		</footer>
-	</article>
+				<dt>Last Updated</dt>
+				<dd>{selectedFeedConfig.last_updated}</dd>
+
+				<dt>ETag</dt>
+				<dd>{selectedFeedConfig.etag || 'none'}</dd>
+			</dl>
+			<footer>
+				<button onclick={resetActionState}> Close </button>
+			</footer>
+		</article>
+	{/if}
 </dialog>
 
 <dialog open={selectedFeedConfig !== null && selectedAction === 'delete'}>
@@ -356,6 +355,15 @@
 							<option value="atom">Atom</option>
 							<option value="unknown">Unknown</option>
 						</select>
+
+						<label for="scan_interval"> Scan Interval </label>
+						<input
+							id="scan_interval"
+							type="text"
+							required
+							bind:value={feedConfigForm.scan_interval}
+						/>
+						<small>ex: 5m, 4h, 1d, 2w</small>
 					</details>
 
 					<hr />
@@ -366,14 +374,27 @@
 					<label for="description"> Description </label>
 					<textarea id="description" bind:value={feedConfigForm.description}></textarea>
 
-					<label for="scan_interval"> Scan Interval </label>
-					<input
-						id="scan_interval"
-						type="text"
-						required
-						bind:value={feedConfigForm.scan_interval}
-					/>
-					<small>ex: 5m, 4h, 1d, 2w</small>
+					<fieldset>
+						<legend>Open Entries...</legend>
+
+						<input
+							type="radio"
+							id="in-app"
+							name="in-app"
+							value="in-app"
+							bind:group={feedConfigForm.open_entry_setting}
+						/>
+						<label for="in-app">In App</label>
+
+						<input
+							type="radio"
+							id="new-tab"
+							name="new-tab"
+							value="new-tab"
+							bind:group={feedConfigForm.open_entry_setting}
+						/>
+						<label for="new-tab">In a New Tab</label>
+					</fieldset>
 				</fieldset>
 				<footer class="buttons">
 					<button type="button" class="secondary" onclick={resetActionState}> Cancel </button>

@@ -1,7 +1,7 @@
 /// <reference types="../../env.d.ts" />
 
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm';
-import type { FeedConfigFormData, FeedConfigRow, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
+import type { FeedConfigFormData, FeedConfigOpenEntrySetting, FeedConfigRow, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
 import { DEFAULT_FEED_CONFIG, NEW_FEED_CONFIG } from './consts';
 
 export const demoDummy = (db: Sqlite3DatabaseHandle) => {
@@ -176,18 +176,6 @@ export const prepareDbTables = (db: Sqlite3DatabaseHandle) => {
     }
 
     makeMigration(
-        "foobar",
-        () => {
-            db.exec(`
-                CREATE TABLE foobar (
-                    id INTEGER PRIMARY KEY, 
-                    name TEXT
-                )
-            `);
-        }
-    );
-
-    makeMigration(
         "feed_configs",
         () => {
             db.exec(`
@@ -207,6 +195,26 @@ export const prepareDbTables = (db: Sqlite3DatabaseHandle) => {
             `);
         }
     )
+
+    makeMigration(
+        "feed_config_open_entry_setting",
+        () => {
+            db.exec(`
+                ALTER TABLE feed_configs
+                ADD COLUMN open_entry_setting TEXT    
+            `)
+
+            db.exec({
+                sql: `
+                    UPDATE feed_configs
+                    SET open_entry_setting = ?
+                `,
+                bind: [
+                    NEW_FEED_CONFIG.open_entry_setting
+                ]
+            })
+        }
+    );
 }
 
 export const listFeedConfigs = (db: Sqlite3DatabaseHandle): ListFeedConfigResponse => {
@@ -221,6 +229,7 @@ export const listFeedConfigs = (db: Sqlite3DatabaseHandle): ListFeedConfigRespon
                 title, 
                 description, 
                 scan_interval, 
+                open_entry_setting,
                 last_updated, 
                 last_checked, 
                 etag
@@ -233,10 +242,23 @@ export const listFeedConfigs = (db: Sqlite3DatabaseHandle): ListFeedConfigRespon
             title,
             description,
             scan_interval,
+            open_entry_setting,
             last_updated,
             last_checked,
             etag
-        ]: [number, string, string, string, string, string, string, string, string, string]) => {
+        ]: [
+                number, // id
+                string, // feed_type
+                string, // url
+                string, // proxy
+                string, // title
+                string, // description
+                string, // scan_interval
+                FeedConfigOpenEntrySetting, // open_entry_setting
+                string, // last_updated
+                string, // last_checked
+                string  // etag
+            ]) => {
             feedConfigs.push({
                 id,
                 feed_type,
@@ -245,6 +267,7 @@ export const listFeedConfigs = (db: Sqlite3DatabaseHandle): ListFeedConfigRespon
                 title,
                 description,
                 scan_interval,
+                open_entry_setting,
                 last_updated,
                 last_checked,
                 etag,
@@ -265,6 +288,7 @@ export const insertFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConf
         title,
         description,
         scan_interval,
+        open_entry_setting,
     } = feedConfig;
 
     db.exec({
@@ -276,6 +300,7 @@ export const insertFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConf
                 title,
                 description,
                 scan_interval,
+                open_entry_setting,
                 last_updated,
                 last_checked,
                 etag,
@@ -288,6 +313,7 @@ export const insertFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConf
             title,
             description,
             scan_interval,
+            open_entry_setting,
             "",
             "",
             "",
@@ -310,6 +336,7 @@ export const updateFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConf
         title,
         description,
         scan_interval,
+        open_entry_setting,
     } = feedConfig;
 
     db.exec({
@@ -321,7 +348,8 @@ export const updateFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConf
                 proxy = ?,
                 title = ?,
                 description = ?,
-                scan_interval = ?
+                scan_interval = ?,
+                open_entry_setting = ?
             WHERE id = ?
             RETURNING title`,
         bind: [
@@ -331,6 +359,7 @@ export const updateFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConf
             title,
             description,
             scan_interval,
+            open_entry_setting,
             id,
         ],
         callback: ([title]: [string]) => {
@@ -396,6 +425,7 @@ export const selectFeedConfigFull = (db: Sqlite3DatabaseHandle, feedConfigId: nu
                 title, 
                 description, 
                 scan_interval, 
+                open_entry_setting,
                 last_updated, 
                 last_checked, 
                 etag,
@@ -413,22 +443,24 @@ export const selectFeedConfigFull = (db: Sqlite3DatabaseHandle, feedConfigId: nu
                 title,
                 description,
                 scan_interval,
+                open_entry_setting,
                 last_updated,
                 last_checked,
                 etag,
                 html
             ]: [
-                    number,
-                    string,
-                    string,
-                    string,
-                    string,
-                    string,
-                    string,
-                    string,
-                    string,
-                    string,
-                    string
+                    number, // id
+                    string, // feed_type
+                    string, // url
+                    string, // proxy
+                    string, // title
+                    string, // description
+                    string, // scan_interval
+                    FeedConfigOpenEntrySetting, // open_entry_setting
+                    string, // last_updated
+                    string, // last_checked
+                    string, // etag
+                    string // html
                 ]
         ) => {
             feedConfig = {
@@ -439,6 +471,7 @@ export const selectFeedConfigFull = (db: Sqlite3DatabaseHandle, feedConfigId: nu
                 title,
                 description,
                 scan_interval,
+                open_entry_setting,
                 last_updated,
                 last_checked,
                 etag,

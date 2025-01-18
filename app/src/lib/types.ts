@@ -84,6 +84,8 @@ export interface Sqlite3Hanlde {
     };
 }
 
+export type FeedConfigOpenEntrySetting = 'new-tab' | 'in-app';
+
 export interface FeedConfigRow {
     id: number;
     feed_type: string;
@@ -92,6 +94,7 @@ export interface FeedConfigRow {
     title: string;
     description: string;
     scan_interval: string;
+    open_entry_setting: FeedConfigOpenEntrySetting;
     last_updated: string;
     last_checked: string;
     etag: string;
@@ -108,6 +111,7 @@ export interface FeedConfigFormData {
     title: string;
     description: string;
     scan_interval: string;
+    open_entry_setting: FeedConfigOpenEntrySetting;
 }
 
 export interface UpdateFeedConfigData {
