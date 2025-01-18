@@ -16,8 +16,8 @@ export interface MessageUpdateFeedConfig extends MessagePayloadBase {
     feedConfig: FeedConfigFormData;
 }
 
-export interface MessageGetFeedConfigHTML extends MessagePayloadBase {
-    message: "get-feed-config-html";
+export interface MessageGetFeedConfigFull extends MessagePayloadBase {
+    message: "get-feed-config-full";
     feedConfigId: number;
 }
 
@@ -31,7 +31,7 @@ export interface MessageDeleteFeedConfig extends MessagePayloadBase {
     feedConfigId: number;
 }
 
-export type MessagePayload = GeneralMessagePayload | MessageInsertFeedConfig | MessageUpdateFeedConfig | MessageUpdateFeedData | MessageGetFeedConfigHTML | MessageDeleteFeedConfig;
+export type MessagePayload = GeneralMessagePayload | MessageInsertFeedConfig | MessageUpdateFeedConfig | MessageUpdateFeedData | MessageGetFeedConfigFull | MessageDeleteFeedConfig;
 
 export interface MessageResponseBase {
     message: string;
@@ -54,15 +54,20 @@ export interface MessageResponseFeedConfigs extends MessageResponseBase {
     feedConfigs: ListFeedConfigResponse;
 }
 
-export interface MessageResponseFeedConfigHTML extends MessageResponseBase {
-    message: "feed-config-html";
-    data: FeedConfigHTMLResponse;
+export interface MessageResponseFeedConfigFull extends MessageResponseBase {
+    message: "feed-config-full";
+    data: FeedConfigRow;
 }
 
-export type MessageResponse = MessageResponsePong | MessageResponseInitialized | MessageResponseUpgraded | MessageResponseFeedConfigs | MessageResponseFeedConfigHTML;
+export type MessageResponse = MessageResponsePong | MessageResponseInitialized | MessageResponseUpgraded | MessageResponseFeedConfigs | MessageResponseFeedConfigFull;
 
 export interface WorkerInterface extends Worker {
     postMessage: (message: MessagePayload) => void;
+}
+
+export interface WorkerContextState {
+    callback: (event: MessageEvent<MessageResponse>) => void;
+    ready: boolean;
 }
 
 export interface Sqlite3DatabaseHandle {
@@ -110,10 +115,5 @@ export interface UpdateFeedConfigData {
     last_updated: string;
     last_checked: string;
     etag: string;
-    html: string;
-}
-
-export interface FeedConfigHTMLResponse {
-    id: number;
     html: string;
 }

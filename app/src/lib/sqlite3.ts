@@ -1,7 +1,8 @@
 /// <reference types="../../env.d.ts" />
 
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm';
-import type { FeedConfigFormData, FeedConfigHTMLResponse, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
+import type { FeedConfigFormData, FeedConfigRow, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
+import { DEFAULT_FEED_CONFIG, NEW_FEED_CONFIG } from './consts';
 
 export const demoDummy = (db: Sqlite3DatabaseHandle) => {
     console.log("Created database at", db.filename);
@@ -380,21 +381,73 @@ export const deleteFeedConfig = (db: Sqlite3DatabaseHandle, feedConfigId: number
     });
 }
 
-export const selectFeedConfigHTML = (db: Sqlite3DatabaseHandle, feedConfigId: number): FeedConfigHTMLResponse => {
-    let html = "";
+export const selectFeedConfigFull = (db: Sqlite3DatabaseHandle, feedConfigId: number): FeedConfigRow => {
+    let feedConfig = {
+        ...DEFAULT_FEED_CONFIG
+    };
+
     db.exec({
         sql: `
-            SELECT html
+            SELECT 
+                id, 
+                feed_type, 
+                url, 
+                proxy,
+                title, 
+                description, 
+                scan_interval, 
+                last_updated, 
+                last_checked, 
+                etag,
+                html
             FROM feed_configs
             WHERE id = ?
         `,
         bind: [feedConfigId],
-        callback: ([htmlData]: [string]) => {
-            html = htmlData;
+        callback: (
+            [
+                id,
+                feed_type,
+                url,
+                proxy,
+                title,
+                description,
+                scan_interval,
+                last_updated,
+                last_checked,
+                etag,
+                html
+            ]: [
+                    number,
+                    string,
+                    string,
+                    string,
+                    string,
+                    string,
+                    string,
+                    string,
+                    string,
+                    string,
+                    string
+                ]
+        ) => {
+            feedConfig = {
+                id,
+                feed_type,
+                url,
+                proxy,
+                title,
+                description,
+                scan_interval,
+                last_updated,
+                last_checked,
+                etag,
+                html,
+            };
         }
     });
 
-    return { id: feedConfigId, html };
+    return feedConfig;
 }
 
 export const initializeSqlite = async () => {

@@ -1,4 +1,4 @@
-import { demo, devNukeDb, initializeSqlite, listFeedConfigs, insertFeedConfig, prepareDbTables, updateFeedData, selectFeedConfigHTML, deleteFeedConfig, updateFeedConfig } from "./sqlite3";
+import { demo, devNukeDb, initializeSqlite, listFeedConfigs, insertFeedConfig, prepareDbTables, updateFeedData, selectFeedConfigFull, deleteFeedConfig, updateFeedConfig } from "./sqlite3";
 import type { MessagePayload, MessageResponse, Sqlite3DatabaseHandle } from "./types";
 
 async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<MessagePayload>): Promise<MessageResponse> {
@@ -35,14 +35,6 @@ async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<Mess
             const feedConfigs = listFeedConfigs(db);
             return { message: "feed-configs", feedConfigs };
         }
-        case "update-feed-config-data": {
-            console.log('Update feed data message received');
-            const feedConfig = event.data.feedConfigData;
-            updateFeedData(db, feedConfig);
-
-            const feedConfigs = listFeedConfigs(db);
-            return { message: "feed-configs", feedConfigs };
-        }
         case "delete-feed-config": {
             console.log('Delete feed config message received');
             const feedConfigId = event.data.feedConfigId;
@@ -51,11 +43,19 @@ async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<Mess
             const feedConfigs = listFeedConfigs(db);
             return { message: "feed-configs", feedConfigs };
         }
-        case "get-feed-config-html": {
+        case "get-feed-config-full": {
             console.log('Get feed config HTML message received');
             const feedConfigId = event.data.feedConfigId;
-            const feedConfigHTMLResponse = selectFeedConfigHTML(db, feedConfigId);
-            return { message: "feed-config-html", data: feedConfigHTMLResponse };
+            const feedConfigFullResponse = selectFeedConfigFull(db, feedConfigId);
+            return { message: "feed-config-full", data: feedConfigFullResponse };
+        }
+        case "update-feed-config-data": {
+            console.log('Update feed data message received');
+            const feedConfig = event.data.feedConfigData;
+            updateFeedData(db, feedConfig);
+
+            const feedConfigFullResponse = selectFeedConfigFull(db, feedConfig.id);
+            return { message: "feed-config-full", data: feedConfigFullResponse };
         }
         case "demo": {
             console.log('Demo message received');

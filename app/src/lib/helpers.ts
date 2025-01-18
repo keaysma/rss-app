@@ -1,4 +1,4 @@
-import type { ListFeedConfigResponse } from "./types";
+import type { ListFeedConfigResponse, MessagePayload } from "./types";
 
 export const getFetchURL = ({ url, proxy }: {
     url: string;
@@ -66,3 +66,43 @@ export const formatDate = (serializedDate: string): string => {
         }
     );
 }
+
+export const refreshFeed = async (feedConfig: ListFeedConfigResponse[number], onPost: (args0: MessagePayload) => void): Promise<string> => {
+    const headers: HeadersInit = {};
+    if (feedConfig.etag) {
+        headers['If-None-Match'] = feedConfig.etag;
+    }
+
+    const fetchURL = getFetchURL({
+        url: feedConfig.url,
+        proxy: feedConfig.proxy
+    });
+
+    const res = await fetch(fetchURL, {
+        headers
+    });
+    if (res.status === 304) {
+        console.debug('feed not modified', feedConfig.url);
+
+        // Potentially could end up with an blank article
+        return '';
+    }
+
+    const last_checked = new Date().toISOString();
+
+    const etag = res.headers.get('etag') || '';
+    const html = await res.text();
+    const last_updated = getLastUpdated(feedConfig, res, html).toISOString();
+    onPost({
+        message: 'update-feed-config-data',
+        feedConfigData: {
+            id: feedConfig.id,
+            last_checked,
+            last_updated,
+            html,
+            etag
+        }
+    });
+
+    return html;
+};
