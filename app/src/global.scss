@@ -4,6 +4,8 @@ h1+button {
 }
 
 .actions {
+    vertical-align: top;
+
     &>* {
         margin: 0;
     }

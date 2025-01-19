@@ -206,6 +206,7 @@
 							<!-- svelte-ignore a11y_no_redundant_roles -->
 							<summary role="button">...</summary>
 							<ul
+								dir="rtl"
 								onclickcapture={(e) => {
 									(e.currentTarget.parentElement as HTMLDetailsElement).open = false;
 								}}

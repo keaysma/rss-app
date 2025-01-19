@@ -1,10 +1,18 @@
 import type { ListFeedConfigResponse, MessagePayload } from "./types";
 
-export const getFetchURL = ({ url, proxy }: {
+export const getFetchURL = ({ url, proxy, baseURL }: {
+    baseURL?: string;
     url: string;
     proxy?: string;
 }): string => {
+    console.debug( {url, proxy, baseURL})
     if (proxy === "cors-relay") {
+        // Test if url is relative
+        if (baseURL && !url.match(/^(?:[a-z]+:)?\/\//i)) {
+            const baseOrigin = new URL(baseURL).origin;
+            console.debug('url is relative', url, `${baseOrigin}${url}`);
+            return `/cors-buster?page=${encodeURIComponent(`${baseOrigin}${url}`)}`;
+        }
         return `/cors-buster?page=${encodeURIComponent(url)}`;
     }
 
@@ -106,3 +114,30 @@ export const refreshFeed = async (feedConfig: ListFeedConfigResponse[number], on
 
     return html;
 };
+
+export const rewriteDocumentURLs = (feedConfig: ListFeedConfigResponse[number], doc: Document) => {
+    if (feedConfig.proxy === 'cors-relay') {
+        console.debug('rewriting document URLs', feedConfig.url);
+
+        // Pass all links through the proxy
+        doc.querySelectorAll('a').forEach((link) => {
+            const href = link.getAttribute('href');
+            if (href) {
+                link.href = getFetchURL({ baseURL: feedConfig.url, url: href, proxy: feedConfig.proxy });
+            }
+        });
+
+        // Pass all images through the proxy
+        doc.querySelectorAll('img').forEach((image) => {
+            const src = image.getAttribute('src');
+            if (src) {
+                image.src = getFetchURL({ baseURL: feedConfig.url, url: src, proxy: feedConfig.proxy });
+            }
+
+            const srcset = image.getAttribute('srcset');
+            if (srcset) {
+                image.srcset = '';
+            }
+        });
+    }
+}

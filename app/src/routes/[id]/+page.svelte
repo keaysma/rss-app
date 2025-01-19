@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatDate, getFetchURL, refreshFeed } from '$lib/helpers';
+	import { formatDate, getFetchURL, refreshFeed, rewriteDocumentURLs } from '$lib/helpers';
 	import type {
 		FeedConfigRow,
 		MessagePayload,
@@ -59,7 +59,7 @@
 		const items = doc.querySelectorAll('item, entry');
 		const parsedItems = Array.from(items).map((item) => {
 			const guid = item.querySelector('guid')?.textContent || '';
-			const title = item.querySelector('title')?.textContent || '';
+			const rawTitle = item.querySelector('title')?.textContent || '';
 			const rawDescription = item.querySelector('description')?.textContent || '';
 			const enclosure = item.querySelector('enclosure')?.getAttribute('url') || '';
 			const pubDate = item.querySelector('pubDate')?.textContent || '';
@@ -67,11 +67,18 @@
 			const content = item.querySelector('content')?.textContent || '';
 			const summary = item.querySelector('summary')?.textContent || '';
 
+			const titleDocument = parser.parseFromString(rawTitle, 'text/html');
+			const title = titleDocument.body.innerHTML;
+
 			const link =
 				item.querySelector('link')?.textContent ||
 				item.querySelector('link')?.nextSibling?.textContent ||
 				guid;
-			const descriptionHtml = parser.parseFromString(rawDescription, 'text/html').body.innerHTML;
+
+			const descriptionDocument = parser.parseFromString(rawDescription, 'text/html');
+			rewriteDocumentURLs(selectedFeedConfig!, descriptionDocument);
+
+			const descriptionHtml = descriptionDocument.body.innerHTML;
 
 			return {
 				guid,
@@ -103,14 +110,9 @@
 
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(html, 'text/html');
+		rewriteDocumentURLs(selectedFeedConfig!, doc);
 
-		// Add <base href={selectedFeedEntryLink}/>
-		const base = doc.createElement('base');
-		base.href = selectedFeedEntryLink;
-		doc.head.appendChild(base);
-
-		// entire document to string
-		return doc.documentElement.outerHTML;
+		return doc.documentElement.innerHTML;
 	});
 
 	const hanldeRefreshFeed = async () => {
@@ -174,6 +176,7 @@
 								<!-- svelte-ignore a11y_no_redundant_roles -->
 								<summary role="button">...</summary>
 								<ul
+									dir="rtl"
 									onclickcapture={(e) => {
 										(e.currentTarget.parentElement as HTMLDetailsElement).open = false;
 									}}
