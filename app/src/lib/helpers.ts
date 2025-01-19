@@ -140,4 +140,28 @@ export const rewriteDocumentURLs = (feedConfig: ListFeedConfigResponse[number], 
             image.srcset = '';
         }
     });
+
+    doc.querySelectorAll('source').forEach((sourceEl) => {
+        const src = sourceEl.getAttribute('src');
+        if (src) {
+            sourceEl.src = getFetchURL({ baseURL: feedConfig.url, url: src, proxy: feedConfig.proxy });
+        }
+
+        const srcset = sourceEl.getAttribute('srcset');
+        if (srcset) {
+            sourceEl.srcset = '';
+        }
+    });
+
+    doc.querySelectorAll('video').forEach((video) => {
+        const src = video.getAttribute('src');
+        if (src) {
+            video.src = getFetchURL({ baseURL: feedConfig.url, url: src, proxy: feedConfig.proxy });
+        }
+
+        const poster = video.getAttribute('poster');
+        if (poster) {
+            video.poster = getFetchURL({ baseURL: feedConfig.url, url: poster, proxy: feedConfig.proxy });
+        }
+    });
 }

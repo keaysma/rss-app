@@ -11,7 +11,6 @@ You over enter a room on a house tour or something and try to turn on the lights
     - [ ] Scans while away from page
     - [ ] Leaves notifications on changes
 - [ ] Light mode/Dark mode switcher
-- [ ] Fix HTTP/206 in CORS-Buster
 - [ ] See if CORS Buster-mode could be better fixed
     - Support for re-writing embedded links to go through CORS Buster?
 - [ ] Look into supporting other things (what is ATOM? I literally don't know)

@@ -12,6 +12,7 @@ export async function GET(event) {
     const contentType = rawContentType ? rawContentType.split(";")[0] : "";
 
     switch (contentType) {
+        case "application/json":
         case "application/xml":
         case "application/rss+xml":
         case "application/atom+xml":
@@ -31,6 +32,14 @@ export async function GET(event) {
         case "image/webp":
             const blob = await response.blob();
             return new Response(blob, {
+                headers: {
+                    "content-type": contentType,
+                },
+            });
+        case "video/mp4":
+        case "video/webm":
+            const videoBlob = await response.blob();
+            return new Response(videoBlob, {
                 headers: {
                     "content-type": contentType,
                 },
