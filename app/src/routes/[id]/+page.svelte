@@ -110,6 +110,7 @@
 
 		const parser = new DOMParser();
 		const doc = parser.parseFromString(html, 'text/html');
+		console.debug('selectedFeedEntryHTML', { html, doc });
 		rewriteDocumentURLs(selectedFeedConfig!, doc);
 
 		return doc.documentElement.innerHTML;

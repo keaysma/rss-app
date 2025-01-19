@@ -5,18 +5,20 @@ export const getFetchURL = ({ url, proxy, baseURL }: {
     url: string;
     proxy?: string;
 }): string => {
-    console.debug( {url, proxy, baseURL})
-    if (proxy === "cors-relay") {
-        // Test if url is relative
-        if (baseURL && !url.match(/^(?:[a-z]+:)?\/\//i)) {
-            const baseOrigin = new URL(baseURL).origin;
-            console.debug('url is relative', url, `${baseOrigin}${url}`);
-            return `/cors-buster?page=${encodeURIComponent(`${baseOrigin}${url}`)}`;
-        }
-        return `/cors-buster?page=${encodeURIComponent(url)}`;
+    let targetUrl = url;
+
+    if (baseURL && !url.match(/^(?:[a-z]+:)?\/\//i)) {
+        const baseOrigin = new URL(baseURL).origin;
+        targetUrl = `${baseOrigin}${url}`;
+        console.debug('rewriting URL', url, '=>', targetUrl);
     }
 
-    return url;
+    if (proxy === "cors-relay") {
+        // Test if url is relative
+        return `/cors-buster?page=${encodeURIComponent(targetUrl)}`;
+    }
+
+    return targetUrl;
 }
 
 // Turn a scan interval string into a number of milliseconds.
@@ -116,28 +118,26 @@ export const refreshFeed = async (feedConfig: ListFeedConfigResponse[number], on
 };
 
 export const rewriteDocumentURLs = (feedConfig: ListFeedConfigResponse[number], doc: Document) => {
-    if (feedConfig.proxy === 'cors-relay') {
-        console.debug('rewriting document URLs', feedConfig.url);
+    console.debug('rewriting document URLs', feedConfig.url);
 
-        // Pass all links through the proxy
-        doc.querySelectorAll('a').forEach((link) => {
-            const href = link.getAttribute('href');
-            if (href) {
-                link.href = getFetchURL({ baseURL: feedConfig.url, url: href, proxy: feedConfig.proxy });
-            }
-        });
+    // Pass all links through the proxy
+    doc.querySelectorAll('a').forEach((link) => {
+        const href = link.getAttribute('href');
+        if (href) {
+            link.href = getFetchURL({ baseURL: feedConfig.url, url: href, proxy: feedConfig.proxy });
+        }
+    });
 
-        // Pass all images through the proxy
-        doc.querySelectorAll('img').forEach((image) => {
-            const src = image.getAttribute('src');
-            if (src) {
-                image.src = getFetchURL({ baseURL: feedConfig.url, url: src, proxy: feedConfig.proxy });
-            }
+    // Pass all images through the proxy
+    doc.querySelectorAll('img').forEach((image) => {
+        const src = image.getAttribute('src');
+        if (src) {
+            image.src = getFetchURL({ baseURL: feedConfig.url, url: src, proxy: feedConfig.proxy });
+        }
 
-            const srcset = image.getAttribute('srcset');
-            if (srcset) {
-                image.srcset = '';
-            }
-        });
-    }
+        const srcset = image.getAttribute('srcset');
+        if (srcset) {
+            image.srcset = '';
+        }
+    });
 }
