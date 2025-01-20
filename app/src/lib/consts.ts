@@ -6,7 +6,7 @@ export const NEW_FEED_CONFIG: FeedConfigFormData = {
     proxy: "",
     title: "",
     description: "",
-    scan_interval: "",
+    scan_interval: "30m",
     open_entry_setting: "in-app",
     feed_type: "",
 };
@@ -17,7 +17,7 @@ export const DEFAULT_FEED_CONFIG: FeedConfigRow = {
     proxy: "",
     title: "",
     description: "",
-    scan_interval: "",
+    scan_interval: "30m",
     open_entry_setting: "in-app",
     feed_type: "",
     last_checked: "",
