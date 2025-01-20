@@ -305,7 +305,7 @@ export const insertFeedConfig = (db: Sqlite3DatabaseHandle, feedConfig: FeedConf
                 last_checked,
                 etag,
                 html
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
         bind: [
             feed_type,
             url,
