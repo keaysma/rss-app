@@ -58,11 +58,15 @@
 		const doc = parser.parseFromString(selectedFeedConfig.html, 'text/html');
 		const items = doc.querySelectorAll('item, entry');
 		const parsedItems = Array.from(items).map((item) => {
-			const guid = item.querySelector('guid')?.textContent || '';
+			const guid =
+				item.querySelector('guid')?.textContent || item.querySelector('id')?.textContent || '';
 			const rawTitle = item.querySelector('title')?.textContent || '';
 			const rawDescription = item.querySelector('description')?.textContent || '';
 			const enclosure = item.querySelector('enclosure')?.getAttribute('url') || '';
-			const pubDate = item.querySelector('pubDate')?.textContent || '';
+			const pubDate =
+				item.querySelector('pubDate')?.textContent ||
+				item.querySelector('published')?.textContent ||
+				'';
 			const updated = item.querySelector('updated')?.textContent || '';
 			const content = item.querySelector('content')?.textContent || '';
 			const summary = item.querySelector('summary')?.textContent || '';
@@ -71,6 +75,7 @@
 			const title = titleDocument.body.innerHTML;
 
 			const link =
+				item.querySelector('link')?.href ||
 				item.querySelector('link')?.textContent ||
 				item.querySelector('link')?.nextSibling?.textContent ||
 				guid;
