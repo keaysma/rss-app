@@ -1,7 +1,7 @@
 import { getFetchURL } from "./helpers";
-import type { ListFeedConfigResponse } from "./types";
+import type { FeedConfigFormData } from "./types";
 
-export const fetchFeedDetails = async (feed: ListFeedConfigResponse[number]) => {
+export const fetchFeedDetails = async (feed: FeedConfigFormData) => {
     const { url, proxy, title, description } = feed;
 
     try {
