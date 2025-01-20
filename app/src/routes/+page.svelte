@@ -117,16 +117,16 @@
 
 	let urlFetchError = $state('');
 	const getFeedDetails = async () => {
-		if (!selectedFeedConfig) {
+		if (!feedConfigForm) {
 			return;
 		}
 
 		urlFetchError = '';
-		fetchFeedDetails(selectedFeedConfig)
+		fetchFeedDetails(feedConfigForm)
 			.then(({ title, description, feed_type }) => {
 				console.debug({ title, description, feed_type });
-				selectedFeedConfig = {
-					...selectedFeedConfig!,
+				feedConfigForm = {
+					...feedConfigForm!,
 					title,
 					description,
 					feed_type
@@ -168,7 +168,7 @@
 
 <!-- list of feed configs -->
 <header>
-	<h1>Feeds</h1>
+	<h1>RSS!</h1>
 	<button
 		disabled={!workerState.ready}
 		onclick={() => {
