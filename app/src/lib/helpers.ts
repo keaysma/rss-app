@@ -58,6 +58,51 @@ export const getLastUpdated = (feedConfig: ListFeedConfigResponse[number], respo
                 return new Date(text);
             }
         }
+
+        // Fallback to pubDate:
+        // Try to find the most recent pubDate
+        const pubDates = Array.from(doc.querySelectorAll("pubDate"));
+        if (pubDates.length > 0) {
+            const dates = pubDates.map((pubDate) => {
+                const text = pubDate.textContent;
+                if (text) {
+                    return new Date(text).getTime();
+                }
+                return 0;
+            }).filter((time) => time > 0);
+
+            if (dates.length > 0) {
+                return new Date(Math.max(...dates));
+            }
+        }
+    }
+
+    if (feedConfig.feed_type === "atom") {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(text, "application/xml");
+        const updated = doc.querySelector("updated");
+        if (updated) {
+            const text = updated.textContent;
+            if (text) {
+                return new Date(text);
+            }
+        }
+
+        // Fallback to entry updated:
+        const updateds = Array.from(doc.querySelectorAll("entry updated"));
+        if (updateds.length > 0) {
+            const dates = updateds.map((updated) => {
+                const text = updated.textContent;
+                if (text) {
+                    return new Date(text).getTime();
+                }
+                return 0;
+            }).filter((time) => time > 0);
+
+            if (dates.length > 0) {
+                return new Date(Math.max(...dates));
+            }
+        }
     }
 
     return new Date();
