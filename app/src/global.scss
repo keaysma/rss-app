@@ -14,3 +14,10 @@ h1+button {
         width: 4.5em;
     }
 }
+
+// To stop inline videos inside feed entry description from overflowing
+document {
+    video {
+        max-width: 100%;
+    }
+}
