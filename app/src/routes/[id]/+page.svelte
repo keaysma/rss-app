@@ -61,7 +61,10 @@
 			const guid =
 				item.querySelector('guid')?.textContent || item.querySelector('id')?.textContent || '';
 			const rawTitle = item.querySelector('title')?.textContent || '';
-			const rawDescription = item.querySelector('description')?.textContent || '';
+			const rawDescription =
+				item.querySelector('description')?.textContent ||
+				item.querySelector('content')?.textContent ||
+				'';
 			const enclosure = item.querySelector('enclosure')?.getAttribute('url') || '';
 			const pubDate =
 				item.querySelector('pubDate')?.textContent ||
@@ -98,7 +101,9 @@
 			};
 		});
 
-		return parsedItems;
+		return parsedItems.toSorted(
+			(a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
+		);
 	});
 	let selectedFeedEntryLink: null | string = $state(null);
 	let selectedFeedEntryHTML = $derived.by(async () => {
