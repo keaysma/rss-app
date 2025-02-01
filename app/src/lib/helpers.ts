@@ -166,12 +166,12 @@ export const rewriteDocumentURLs = (feedConfig: ListFeedConfigResponse[number], 
     console.debug('rewriting document URLs', feedConfig.url);
 
     // Pass all links through the proxy
-    doc.querySelectorAll('a').forEach((link) => {
-        const href = link.getAttribute('href');
-        if (href) {
-            link.href = getFetchURL({ baseURL: feedConfig.url, url: href, proxy: feedConfig.proxy });
-        }
-    });
+    // doc.querySelectorAll('a').forEach((link) => {
+    //     const href = link.getAttribute('href');
+    //     if (href) {
+    //         link.href = getFetchURL({ baseURL: feedConfig.url, url: href, proxy: feedConfig.proxy });
+    //     }
+    // });
 
     // Pass all images through the proxy
     doc.querySelectorAll('img').forEach((image) => {
