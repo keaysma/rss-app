@@ -1,4 +1,4 @@
-import { demo, devNukeDb, initializeSqlite, listFeedConfigs, insertFeedConfig, prepareDbTables, updateFeedData, selectFeedConfigFull, deleteFeedConfig, updateFeedConfig } from "./sqlite3";
+import { demo, devNukeDb, initializeSqlite, listFeedConfigs, insertFeedConfig, prepareDbTables, updateFeedData, selectFeedConfigFull, deleteFeedConfig, updateFeedConfig, listFeedEntriesMetadata, upsertFeedEntryMetadata, bulkUpsertFeedEntryMarkAsRead } from "./sqlite3";
 import type { MessagePayload, MessageResponse, Sqlite3DatabaseHandle } from "./types";
 
 async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<MessagePayload>): Promise<MessageResponse> {
@@ -57,6 +57,44 @@ async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<Mess
             const feedConfigFullResponse = selectFeedConfigFull(db, feedConfig.id);
             return { message: "feed-config-full", data: feedConfigFullResponse };
         }
+        case "list-feed-entries-metadata": {
+            console.log('Get feed entry metadata message received');
+            const feedConfigId = event.data.feedConfigId;
+
+            const entriesMetadata = listFeedEntriesMetadata(db, feedConfigId);
+
+            return {
+                message: "feed-entry-metadata-list",
+                feedConfigId,
+                entriesMetadata,
+            };
+        }
+        case "update-feed-entry-metadata": {
+            console.log('Update feed entry metadata message received');
+            const { feedConfigId, entryMetadata } = event.data;
+            upsertFeedEntryMetadata(db, feedConfigId, entryMetadata);
+
+            const entriesMetadata = listFeedEntriesMetadata(db, feedConfigId);
+
+            return {
+                message: "feed-entry-metadata-list",
+                feedConfigId,
+                entriesMetadata,
+            };
+        }
+        case "bulk-update-entries-mark-read": {
+            console.log("Bulk update feed entries mark as read received");
+            const { feedConfigId, entryIds } = event.data;
+            bulkUpsertFeedEntryMarkAsRead(db, feedConfigId, entryIds);
+
+            const entriesMetadata = listFeedEntriesMetadata(db, feedConfigId);
+
+            return {
+                message: "feed-entry-metadata-list",
+                feedConfigId,
+                entriesMetadata,
+            };
+        }
         case "demo": {
             console.log('Demo message received');
             demo(db);
@@ -70,7 +108,7 @@ async function handleMessage(db: Sqlite3DatabaseHandle, event: MessageEvent<Mess
         default:
             console.error('Unknown message', event.data);
 
-        return { message: "pong" };
+            return { message: "pong" };
     }
 }
 

@@ -2,6 +2,7 @@
 	import { formatDate, getFetchURL, refreshFeed, rewriteDocumentURLs } from '$lib/helpers';
 	import type {
 		FeedConfigRow,
+		FeedEntryMetadata,
 		MessagePayload,
 		MessageResponse,
 		WorkerContextState
@@ -9,10 +10,14 @@
 	import { getContext } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { isolateClick } from '$lib/utils';
+
+	type EntryMDMap = Record<FeedEntryMetadata['entryId'], FeedEntryMetadata>;
 
 	const feedConfigId = Number(page.params.id);
 
 	let selectedFeedConfig = $state<FeedConfigRow>();
+	let feedEntryMetadata = $state<EntryMDMap>({});
 
 	const postMessage = getContext<(args: MessagePayload) => void>('postMessage');
 	const workerState = getContext<WorkerContextState>('onMessageConnector');
@@ -29,6 +34,23 @@
 				selectedFeedConfig = event.data.data;
 				break;
 			}
+			case 'feed-entry-metadata-list': {
+				console.debug('received feed-entry-metadata-list');
+				if (event.data.feedConfigId !== feedConfigId) {
+					console.warn(
+						'ignore feed-entry-metadata-list: id mismatch',
+						feedConfigId,
+						event.data.feedConfigId
+					);
+					return;
+				}
+
+				feedEntryMetadata = event.data.entriesMetadata.reduce<EntryMDMap>((acc, entry) => {
+					acc[entry.entryId] = entry;
+					return acc;
+				}, {});
+				break;
+			}
 			default:
 				console.log('unknown message', event.data);
 		}
@@ -37,17 +59,51 @@
 	$effect(() => {
 		if (workerState.ready) {
 			console.log('get-feed-config-full', feedConfigId);
+			postMessage({ message: 'list-feed-entries-metadata', feedConfigId });
 			postMessage({ message: 'get-feed-config-full', feedConfigId });
 		}
 	});
 
-	const handleEntryClick = (link: string) => {
+	const handleEntryMarkRead = (entryId: string, isMarkedRead: boolean) => {
+		const existingMetadataEntry = feedEntryMetadata[entryId];
+
+		const entryMetadata = {
+			...existingMetadataEntry,
+			entryId,
+			isMarkedRead
+		} satisfies FeedEntryMetadata;
+
+		postMessage({
+			message: 'update-feed-entry-metadata',
+			feedConfigId,
+			entryMetadata
+		});
+	};
+
+	const handleEntryClick = (entry: { guid: string; link: string }) => {
+		const { guid, link } = entry;
+		handleEntryMarkRead(guid, true);
 		if (selectedFeedConfig?.open_entry_setting == 'in-app') {
 			selectedFeedEntryLink = link;
 		} else {
 			window.open(link, '_blank');
 		}
 	};
+
+	const handleEntryToggleMarkRead = (entryId: string) => {
+		const existingMetadataEntry = feedEntryMetadata[entryId];
+		handleEntryMarkRead(entryId, !(existingMetadataEntry?.isMarkedRead ?? false));
+	};
+
+	const handleMarkAllEntriesAsRead = () => {
+		const entryIds = selectedFeedHTMLParsed.map(({ guid }) => guid)
+
+		postMessage({
+			message: 'bulk-update-entries-mark-read',
+			feedConfigId,
+			entryIds,
+		})
+	}
 
 	let selectedFeedHTMLParsed = $derived.by(() => {
 		if (!selectedFeedConfig || selectedFeedConfig.html === null || selectedFeedConfig.html === '') {
@@ -143,6 +199,19 @@
 	{/if}
 	<button onclick={() => goto(`/`)}> Close </button>
 	<button onclick={hanldeRefreshFeed}> Refresh </button>
+	<details class="dropdown">
+		<!-- svelte-ignore a11y_no_redundant_roles -->
+		<summary role="button">...</summary>
+		<ul
+			onclickcapture={(e) => {
+				(e.currentTarget.parentElement as HTMLDetailsElement).open = false;
+			}}
+		>
+			<li>
+				<a href="##" onclick={() => handleMarkAllEntriesAsRead()}> Mark all as read</a>
+			</li>
+		</ul>
+	</details>
 </header>
 
 <main
@@ -156,13 +225,23 @@
 			<tr>
 				<th></th>
 				<th></th>
+				<th></th>
 			</tr>
 		</thead>
 		<tbody>
 			{#if selectedFeedConfig}
 				{#each selectedFeedHTMLParsed as entry}
 					<tr>
-						<!-- TODO: Use link? -->
+						<td class="mark-read-indicator">
+							<button
+								class="mark-read"
+								class:is-read={feedEntryMetadata[entry.guid]?.isMarkedRead ?? false}
+								aria-label="mark as read"
+								onclick={isolateClick(() => handleEntryToggleMarkRead(entry.guid))}
+							>
+							</button>
+						</td>
+						<!-- TODO: Use link/anchor? -->
 						<td
 							class="entry"
 							onclick={(event) => {
@@ -171,7 +250,7 @@
 									return;
 								}
 
-								handleEntryClick(entry.link);
+								handleEntryClick(entry);
 							}}
 						>
 							<hgroup>
@@ -193,7 +272,12 @@
 									}}
 								>
 									<li>
-										<a href="##">Mark as Read</a>
+										<a href="##" onclick={() => handleEntryToggleMarkRead(entry.guid)}>
+											Mark as Read
+										</a>
+									</li>
+									<li>
+										<a href="##">Save</a>
 									</li>
 									<li>
 										<a href="##">Hide</a>
@@ -221,6 +305,17 @@
 </main>
 
 <style lang="scss">
+	header {
+		> button {
+			display: inline-block;
+		}
+		> details {
+			display: inline-block;
+			width: 5em;
+			margin-left: 0.5em;
+		}
+	}
+
 	.entry-list {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
@@ -237,6 +332,26 @@
 
 		> table {
 			grid-area: entries;
+
+			.mark-read-indicator {
+				vertical-align: top;
+				padding-left: 0.75em;
+				padding-right: 0;
+				> button {
+					width: 24px;
+					height: 24px;
+
+					border-radius: 4em;
+
+					margin: 0;
+					padding: 0;
+
+					&.is-read {
+						border-color: var(--pico-color-grey-500);
+						background-color: var(--pico-color-grey-500);
+					}
+				}
+			}
 
 			.entry {
 				> hgroup {

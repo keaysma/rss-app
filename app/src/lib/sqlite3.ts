@@ -1,7 +1,7 @@
 /// <reference types="../../env.d.ts" />
 
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm';
-import type { FeedConfigFormData, FeedConfigOpenEntrySetting, FeedConfigRow, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
+import type { FeedConfigFormData, FeedConfigOpenEntrySetting, FeedConfigRow, FeedEntryMetadata, ListFeedConfigResponse, Sqlite3DatabaseHandle, Sqlite3Hanlde, UpdateFeedConfigData } from './types';
 import { DEFAULT_FEED_CONFIG, NEW_FEED_CONFIG } from './consts';
 
 export const demoDummy = (db: Sqlite3DatabaseHandle) => {
@@ -215,6 +215,20 @@ export const prepareDbTables = (db: Sqlite3DatabaseHandle) => {
             })
         }
     );
+
+    makeMigration(
+        "feed_entry_metadata",
+        () => {
+            db.exec(`
+                CREATE TABLE feed_entry_metadata (
+                    feed_id INTEGER,
+                    entry_id TEXT,
+                    is_marked_read INTEGER,
+                    PRIMARY KEY (feed_id, entry_id)
+                )
+            `)
+        }
+    )
 }
 
 export const listFeedConfigs = (db: Sqlite3DatabaseHandle): ListFeedConfigResponse => {
@@ -481,6 +495,85 @@ export const selectFeedConfigFull = (db: Sqlite3DatabaseHandle, feedConfigId: nu
     });
 
     return feedConfig;
+}
+
+export const listFeedEntriesMetadata = (db: Sqlite3DatabaseHandle, feedConfigId: number): FeedEntryMetadata[] => {
+    const feedEntriesMetadata: FeedEntryMetadata[] = [];
+    db.exec({
+        sql: `
+            SELECT 
+                entry_id, 
+                is_marked_read
+            FROM feed_entry_metadata
+            WHERE feed_id = ?   
+        `,
+        bind: [feedConfigId],
+        callback: ([
+            entryId,
+            isMarkedReadRaw,
+        ]: [
+                string, // entry_id
+                number, // is_read
+            ]) => {
+            feedEntriesMetadata.push({
+                entryId,
+                isMarkedRead: Boolean(isMarkedReadRaw),
+            });
+        }
+    });
+
+    return feedEntriesMetadata;
+}
+
+export const upsertFeedEntryMetadata = (db: Sqlite3DatabaseHandle, feedConfigId: number, entryMetadata: FeedEntryMetadata) => {
+    console.log("Updating a row in 'feed_entry_metadata' table...");
+
+    const {
+        entryId,
+        isMarkedRead,
+    } = entryMetadata;
+
+    const isMarkedReadInt = Number(isMarkedRead);
+
+    db.exec({
+        sql: `
+            INSERT INTO feed_entry_metadata (
+                feed_id, 
+                entry_id, 
+                is_marked_read
+            ) 
+            VALUES (?, ?, ?) 
+            ON CONFLICT (feed_id, entry_id) 
+            DO UPDATE SET is_marked_read=?;
+        `,
+        bind: [
+            feedConfigId,
+            entryId,
+            isMarkedReadInt,
+            isMarkedReadInt,
+        ],
+    });
+}
+
+export const bulkUpsertFeedEntryMarkAsRead = (db: Sqlite3DatabaseHandle, feedConfigId: number, entryIds: string[]) => {
+    console.log("Updating many rows in 'feed_entry_metadata' table, is_marked_read...");
+
+    let statement = db.prepare(`
+        INSERT INTO feed_entry_metadata (
+            feed_id, 
+            entry_id, 
+            is_marked_read
+        ) 
+        VALUES (?, ?, ?)
+        ON CONFLICT (feed_id, entry_id) 
+        DO UPDATE SET is_marked_read=1;    
+    `);
+
+    entryIds.forEach(
+        (entryId) => statement.bind([feedConfigId, entryId, 1]).stepReset()
+    )
+
+    statement.finalize();
 }
 
 export const initializeSqlite = async () => {
