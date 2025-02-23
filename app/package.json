@@ -17,6 +17,7 @@
 	"dependencies": {
 		"@picocss/pico": "^2.0.6",
 		"@sqlite.org/sqlite-wasm": "^3.47.2-build1",
+		"@sveltejs/adapter-cloudflare": "^5.0.3",
 		"vite-plugin-cross-origin-isolation": "^0.1.6",
 		"vite-plugin-mkcert": "^1.17.6"
 	},

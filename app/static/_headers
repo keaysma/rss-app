@@ -1,0 +1,3 @@
+/_app/immutable/workers/assets/*
+    Cross-Origin-Embedder-Policy: require-corp
+    Cross-Origin-Opener-Policy: same-origin
