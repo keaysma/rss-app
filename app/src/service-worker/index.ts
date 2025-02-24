@@ -23,7 +23,7 @@ const initializeSqlite = async () => {
 
 
 sw.addEventListener('install', async (event) => {
-	console.log("installed", event);
+	console.log("start install", event);
 
 	console.log("initiate sqlite3")
 	const sqlite3InitializationPromise = await initializeSqlite();
