@@ -4,4 +4,5 @@ import { dev } from '$app/environment';
 // 	type: dev ? 'module' : 'classic'
 // });
 
+// SSH left on, as disabling does not appear to play-nice with +page.server.ts
 // export const ssr = false;
